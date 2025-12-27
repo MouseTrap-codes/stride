@@ -64,7 +64,7 @@ export default function Home() {
         />
 
         <FeatureCard
-          icon={Brain}
+          icon={Zap}
           title="AI Project Insights"
           description="Get smart recommendations on what to tackle next, identify blockers, and optimize your workflow with intelligent analysis."
         />
