@@ -65,8 +65,8 @@ export default function Home() {
 
         <FeatureCard
           icon={Zap}
-          title="AI Project Insights"
-          description="Get smart recommendations on what to tackle next, identify blockers, and optimize your workflow with intelligent analysis."
+          title="Real-time Collaboration"
+          description="See changes instantly as your team works. No refresh needed, no confusion, just seamless flow."
         />
       </div>
     </section>
