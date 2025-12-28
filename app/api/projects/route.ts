@@ -18,6 +18,9 @@ export async function GET() {
             id: true,
             name: true,
             description: true,
+            status: true,
+            startDate: true,
+            endDate: true,
             createdAt: true,
             updatedAt: true,
             _count: {select: {tasks:true}}
@@ -49,11 +52,17 @@ export async function POST(req: Request) {
             userId,
             name: parsed.data.name,
             description: parsed.data.description,
+            status: parsed.data.status,
+            startDate: parsed.data.startDate? new Date(parsed.data.startDate) : undefined,
+            endDate: parsed.data.endDate? new Date(parsed.data.endDate) : undefined,
         },
         select: {
             id: true,
             name: true,
             description: true,
+            status: true,
+            startDate: true,
+            endDate: true,
             createdAt: true,
             updatedAt: true,
         }
