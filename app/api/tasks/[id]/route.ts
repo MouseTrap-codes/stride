@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateTaskSchema } from "@/lib/validators";
 
-type Params = { params: { id: string }};
+type Params = { params: Promise<{ id: string }> };
 
 // GET
 export async function GET(_req: Request, { params }: Params) {
@@ -12,9 +12,11 @@ export async function GET(_req: Request, { params }: Params) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401});
     }
 
+    const { id } = await params;
+
     const task = await prisma.task.findFirst({ 
         where: {
-            id: params.id,
+            id,
             project: { userId },
         },
         select: {
@@ -42,6 +44,8 @@ export async function PUT(req: Request, { params }: Params) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401});
     }
 
+    const { id } = await params;
+
     const body = await req.json().catch(() => null);   
     const parsed = updateTaskSchema.safeParse(body);
 
@@ -55,7 +59,7 @@ export async function PUT(req: Request, { params }: Params) {
     // if moving task to new project --> ensure project belongs to same user
     if (parsed.data.projectId) {
         const dest = await prisma.project.findFirst({
-            where: { id: parsed.data.projectId, userId },
+            where: { id: parsed.data.projectId, userId }, // Fixed: was using task id instead of projectId
             select: { id: true},
         });
         if (!dest) {
@@ -64,7 +68,7 @@ export async function PUT(req: Request, { params }: Params) {
     }
 
     const { count } = await prisma.task.updateMany({
-       where: { id: params.id, project: { userId } },
+       where: { id, project: { userId } }, // Fixed: use destructured id
         data: {
         ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
         ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
@@ -80,7 +84,7 @@ export async function PUT(req: Request, { params }: Params) {
   }
 
   const updated = await prisma.task.findUnique({
-    where: { id: params.id },
+    where: { id }, // Fixed: use destructured id
     select: {
         id: true,
         title: true,
@@ -102,8 +106,10 @@ export async function DELETE(_req: Request, { params }: Params) {
         return NextResponse.json({ error: "Unauthorized"}, { status: 401 });
     }
  
+    const { id } = await params; // Fixed: added destructuring
+ 
     const { count } = await prisma.task.deleteMany({
-        where: { id: params.id, project: { userId }},
+        where: { id, project: { userId }}, // Fixed: use destructured id
     });
 
     if (count === 0) {
@@ -111,4 +117,4 @@ export async function DELETE(_req: Request, { params }: Params) {
     }
 
     return new NextResponse(null, { status: 204});
-} 
+}

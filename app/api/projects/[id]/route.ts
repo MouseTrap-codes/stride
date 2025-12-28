@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { updateProjectSchema } from "@/lib/validators";
-import { describe } from "node:test";
 
-type Params = { params: { id: string }};
+type Params = { params: Promise<{ id: string }> };
 
 // GET 
 export async function GET(_req: Request, { params }: Params) {
@@ -13,8 +12,10 @@ export async function GET(_req: Request, { params }: Params) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401});
     }
 
+    const { id } = await params;
+
     const project = await prisma.project.findFirst({
-        where: { id: params.id, userId },
+        where: { id, userId },
         select: {
             id: true,
             name: true,
@@ -61,8 +62,10 @@ export async function PUT(req: Request, { params }: Params) {
         );
     }
 
+    const { id } = await params;
+
     const { count } = await prisma.project.updateMany({
-        where: { id: params.id, userId },
+        where: { id, userId },
         data: {
             name: parsed.data.name,
             ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
@@ -77,7 +80,7 @@ export async function PUT(req: Request, { params }: Params) {
     }
 
     const updated = await prisma.project.findUnique({
-        where: { id: params.id },
+        where: { id },
         select: { id: true, 
             name: true, 
             description: true, 
@@ -95,8 +98,10 @@ export async function DELETE(_req: Request, { params }: Params) {
         return NextResponse.json({ error: "Unauthorized"}, { status: 401 });
     }
 
+    const { id } = await params;
+
     const { count } = await prisma.project.deleteMany({
-        where: { id: params.id, userId },
+        where: { id, userId },
     });
 
     if (count === 0) {

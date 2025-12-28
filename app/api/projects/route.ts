@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server"
 import { prisma } from "@/lib/prisma";
 import { createProjectSchema } from "@/lib/validators";
-import { decodeAction } from "next/dist/server/app-render/entry-base";
 
 
 // GET

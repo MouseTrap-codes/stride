@@ -18,16 +18,27 @@ export async function GET(req: Request) {
     const statusParam = searchParams.get("status");
     const status = statusParam ? createTaskSchema.shape.status.safeParse(statusParam).data : undefined;
     
-    const takeRaw = Number(searchParams.get("take"));
-    const skipRaw = Number(searchParams.get("skip"));
+    const takeParam = searchParams.get("take");
+    const skipParam = searchParams.get("skip");
 
-    const take = Math.min(Number.isFinite(takeRaw) ? takeRaw : 50, 100);
-    const skip = Math.max(Number.isFinite(skipRaw) ? skipRaw : 0, 0);
+    const take = takeParam 
+        ? Math.min(Number(takeParam), 100)
+        : 50;
+    const skip = skipParam
+        ? Math.max(Number(skipParam), 0)
+        : 0;
+
+    // First, get all project IDs for this user
+    const userProjects = await prisma.project.findMany({
+        where: { userId },
+        select: { id: true }
+    });
+    
+    const userProjectIds = userProjects.map(p => p.id);
 
     const tasks = await prisma.task.findMany({
         where: {
-            project: { userId },
-
+            projectId: { in: userProjectIds },  // ✅ Much clearer!
             ...(projectId ? { projectId } : {}),
             ...(status ? { status } : {}),
             ...(q 
@@ -62,6 +73,7 @@ export async function POST(req: Request) {
     if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
 
     const body = await req.json().catch(() => null);
     const parsed = createTaskSchema.safeParse(body);
@@ -99,6 +111,7 @@ export async function POST(req: Request) {
             updatedAt: true,
         },
     });
+
 
     return NextResponse.json({ data: task }, { status: 201 });
 }
