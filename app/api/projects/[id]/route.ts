@@ -49,62 +49,70 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ data: project }, { status: 200 });
 }
 
-// PUT
-// needs name, optional desc
 export async function PUT(req: Request, { params }: Params) {
-    const { userId } = await auth();
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized"}, { status: 401 });
-    }
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized"}, { status: 401 });
+  }
 
-    const body = await req.json().catch(() => null);
-    const parsed = updateProjectSchema.safeParse(body);
+  const body = await req.json().catch(() => null);
+  const parsed = updateProjectSchema.safeParse(body);
 
-    if (!parsed.success) {
-        return NextResponse.json(
-            { error: "Invalid body", details: parsed.error.flatten() },
-            { status: 400}
-        );
-    }
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Invalid body", details: parsed.error.flatten() },
+      { status: 400}
+    );
+  }
 
-    const { id } = await params;
+  const { id } = await params;
 
-    const { count } = await prisma.project.updateMany({
-        where: { id, userId },
-        data: {
-            name: parsed.data.name,
-            status: parsed.data.status,
-            startDate: parsed.data.startDate !== undefined 
-                ? (parsed.data.startDate ? new Date(parsed.data.startDate) : null)
-                : undefined,
-            endDate: parsed.data.endDate !== undefined 
-                ? (parsed.data.endDate ? new Date(parsed.data.endDate) : null)
-                : undefined,
-            ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
-                ? { description : parsed.data.description }
-                : {}
-            ),
-        },
-    });
+  const updateData: any = {
+    name: parsed.data.name,
+  };
 
-    if (count === 0) {
-        return NextResponse.json({ error: "Not found"}, { status: 404 });
-    }
+  // Handle optional fields
+  if (parsed.data.status !== undefined) {
+    updateData.status = parsed.data.status;
+  }
 
-    const updated = await prisma.project.findUnique({
-        where: { id },
-        select: { id: true, 
-            name: true, 
-            description: true, 
-            status: true,
-            startDate: true,
-            endDate: true,
-            createdAt: true, 
-            updatedAt: true
-        },
-    });
+  if (parsed.data.description !== undefined) {
+    updateData.description = parsed.data.description;
+  }
 
-    return NextResponse.json({ data: updated }, { status: 200 });
+  // Handle dates - explicitly check if they exist in the request
+  if (Object.prototype.hasOwnProperty.call(parsed.data, 'startDate')) {
+    updateData.startDate = parsed.data.startDate ? new Date(parsed.data.startDate) : null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(parsed.data, 'endDate')) {
+    updateData.endDate = parsed.data.endDate ? new Date(parsed.data.endDate) : null;
+  }
+
+  const { count } = await prisma.project.updateMany({
+    where: { id, userId },
+    data: updateData,
+  });
+
+  if (count === 0) {
+    return NextResponse.json({ error: "Not found"}, { status: 404 });
+  }
+
+  const updated = await prisma.project.findUnique({
+    where: { id },
+    select: { 
+      id: true, 
+      name: true, 
+      description: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      createdAt: true, 
+      updatedAt: true
+    },
+  });
+
+  return NextResponse.json({ data: updated }, { status: 200 });
 }
 
 // DELETE

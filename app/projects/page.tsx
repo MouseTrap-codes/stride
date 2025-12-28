@@ -259,17 +259,33 @@ function ProjectCard({
                 <span>
                   {project._count.tasks} {project._count.tasks === 1 ? "task" : "tasks"}
                 </span>
-                <span className="text-zinc-700">•</span>
-                <span className="text-zinc-600">
-                  {new Date(project.createdAt).toLocaleDateString()}
-                </span>
+                {/* Only show createdAt if no timeline dates exist */}
+                {!project.startDate && !project.endDate && (
+                  <>
+                    <span className="text-zinc-700">•</span>
+                    <span className="text-zinc-600">
+                      Created {new Date(project.createdAt).toLocaleDateString()}
+                    </span>
+                  </>
+                )}
               </div>
               {(project.startDate || project.endDate) && (
                 <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <CalendarIcon className="w-3 h-3" />
-                  {project.startDate && format(new Date(project.startDate), "MMM d")}
-                  {project.startDate && project.endDate && " - "}
-                  {project.endDate && format(new Date(project.endDate), "MMM d, yyyy")}
+                  {project.startDate && project.endDate ? (
+                    // Both dates - show range
+                    <>
+                      {format(new Date(project.startDate), "MMM d")}
+                      {" - "}
+                      {format(new Date(project.endDate), "MMM d, yyyy")}
+                    </>
+                  ) : project.startDate ? (
+                    // Only start date
+                    <>Starts: {format(new Date(project.startDate), "MMM d, yyyy")}</>
+                  ) : (
+                    // Only end date
+                    <>Ends: {format(new Date(project.endDate!), "MMM d, yyyy")}</>
+                  )}
                 </div>
               )}
             </div>
@@ -329,8 +345,8 @@ function CreateProjectDialog({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<ProjectStatus>("ACTIVE");
-  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
@@ -355,8 +371,8 @@ function CreateProjectDialog({
       setName("");
       setDescription("");
       setStatus("ACTIVE");
-      setStartDate(new Date());
-      setEndDate(new Date());
+      setStartDate(undefined);
+      setEndDate(undefined);
       setShowStartCalendar(false);
       setShowEndCalendar(false);
       onSuccess();
@@ -366,7 +382,7 @@ function CreateProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -421,7 +437,7 @@ function CreateProjectDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-zinc-300">Project Timeline</Label>
+              <Label className="text-zinc-300">Project Timeline (Optional)</Label>
               <div className="grid grid-cols-2 gap-4">
                 {/* Start Date */}
                 <div className="space-y-2">
@@ -539,10 +555,10 @@ function EditProjectDialog({
   const [description, setDescription] = useState(project.description || "");
   const [status, setStatus] = useState<ProjectStatus>(project.status);
   const [startDate, setStartDate] = useState<Date | undefined>(
-    project.startDate ? new Date(project.startDate) : new Date()
+    project.startDate ? new Date(project.startDate) : undefined
   );
   const [endDate, setEndDate] = useState<Date | undefined>(
-    project.endDate ? new Date(project.endDate) : new Date()
+    project.endDate ? new Date(project.endDate) : undefined
   );
   const [loading, setLoading] = useState(false);
   const [showStartCalendar, setShowStartCalendar] = useState(false);
@@ -552,8 +568,8 @@ function EditProjectDialog({
     setName(project.name);
     setDescription(project.description || "");
     setStatus(project.status);
-    setStartDate(project.startDate ? new Date(project.startDate) : new Date());
-    setEndDate(project.endDate ? new Date(project.endDate) : new Date());
+    setStartDate(project.startDate ? new Date(project.startDate) : undefined);
+    setEndDate(project.endDate ? new Date(project.endDate) : undefined);
     setShowStartCalendar(false);
     setShowEndCalendar(false);
   }, [project]);
@@ -569,8 +585,8 @@ function EditProjectDialog({
         name,
         description: description || undefined,
         status,
-        startDate: startDate?.toISOString(),
-        endDate: endDate?.toISOString(),
+        startDate: startDate ? startDate.toISOString() : null,
+        endDate: endDate ? endDate.toISOString() : null,
       }),
     });
 
@@ -582,7 +598,7 @@ function EditProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Project</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -634,7 +650,7 @@ function EditProjectDialog({
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-zinc-300">Project Timeline</Label>
+              <Label className="text-zinc-300">Project Timeline (Optional)</Label>
               <div className="grid grid-cols-2 gap-4">
                 {/* Start Date */}
                 <div className="space-y-2">
