@@ -24,6 +24,8 @@ export async function GET(_req: Request, { params }: Params) {
             title: true,
             description: true,
             status: true,
+            priority: true,
+            dueDate: true,
             projectId: true,
             createdAt: true,
             updatedAt: true,
@@ -59,7 +61,7 @@ export async function PUT(req: Request, { params }: Params) {
     // if moving task to new project --> ensure project belongs to same user
     if (parsed.data.projectId) {
         const dest = await prisma.project.findFirst({
-            where: { id: parsed.data.projectId, userId }, // Fixed: was using task id instead of projectId
+            where: { id: parsed.data.projectId, userId }, 
             select: { id: true},
         });
         if (!dest) {
@@ -68,16 +70,20 @@ export async function PUT(req: Request, { params }: Params) {
     }
 
     const { count } = await prisma.task.updateMany({
-       where: { id, project: { userId } }, // Fixed: use destructured id
+        where: { id, project: { userId } },
         data: {
-        ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
-        ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
-            ? { description: parsed.data.description ?? null }
-            : {}),
-        ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
-        ...(parsed.data.projectId !== undefined ? { projectId: parsed.data.projectId } : {}),
+            ...(parsed.data.title !== undefined ? { title: parsed.data.title } : {}),
+            ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
+                ? { description: parsed.data.description ?? null }
+                : {}),
+            ...(parsed.data.status !== undefined ? { status: parsed.data.status } : {}),
+            ...(parsed.data.priority !== undefined ? { priority: parsed.data.priority } : {}),
+            ...(parsed.data.dueDate !== undefined 
+                ? { dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : null }
+                : {}),
+            ...(parsed.data.projectId !== undefined ? { projectId: parsed.data.projectId } : {}),
         },
-  });
+    });
 
   if (count === 0) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -90,6 +96,8 @@ export async function PUT(req: Request, { params }: Params) {
         title: true,
         description: true,
         status: true,
+        priority: true,
+        dueDate: true,
         projectId: true,
         createdAt: true,
         updatedAt: true,
