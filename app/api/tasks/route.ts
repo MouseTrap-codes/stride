@@ -17,6 +17,9 @@ export async function GET(req: Request) {
 
     const statusParam = searchParams.get("status");
     const status = statusParam ? createTaskSchema.shape.status.safeParse(statusParam).data : undefined;
+
+    const priorityParam = searchParams.get("priority");
+    const priority = priorityParam ? createTaskSchema.shape.priority.safeParse(priorityParam).data : undefined;
     
     const takeParam = searchParams.get("take");
     const skipParam = searchParams.get("skip");
@@ -38,9 +41,10 @@ export async function GET(req: Request) {
 
     const tasks = await prisma.task.findMany({
         where: {
-            projectId: { in: userProjectIds },  // ✅ Much clearer!
+            projectId: { in: userProjectIds },  
             ...(projectId ? { projectId } : {}),
             ...(status ? { status } : {}),
+            ...(priority ? { priority } : {}),
             ...(q 
                 ? {
                     OR: [
@@ -58,6 +62,8 @@ export async function GET(req: Request) {
             title: true,
             description: true,
             status: true, 
+            priority: true,
+            dueDate: true,
             projectId: true,
             createdAt: true,
             updatedAt: true,
@@ -99,6 +105,8 @@ export async function POST(req: Request) {
             title: parsed.data.title,
             description: parsed.data.description,
             status: parsed.data.status,
+            priority: parsed.data.priority,
+            dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
             projectId: parsed.data.projectId,
         },
         select: {
@@ -106,6 +114,8 @@ export async function POST(req: Request) {
             title: true,
             description: true,
             status: true,
+            priority: true,
+            dueDate: true,
             projectId: true,
             createdAt: true,
             updatedAt: true,
