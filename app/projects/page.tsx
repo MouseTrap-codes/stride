@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardAction } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -30,18 +30,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, MoreVertical, Trash2, FolderKanban } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, MoreVertical, Trash2, FolderKanban, Calendar as CalendarIcon, Edit, X } from "lucide-react";
+import { format } from "date-fns";
+
+type ProjectStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
 
 type Project = {
   id: string;
   name: string;
   description: string | null;
+  status: ProjectStatus;
+  startDate: string | null;
+  endDate: string | null;
   createdAt: string;
   updatedAt: string;
   _count: { tasks: number };
+};
+
+const statusConfig = {
+  ACTIVE: { label: "Active", color: "bg-stride-blue/10 text-stride-blue" },
+  COMPLETED: { label: "Completed", color: "bg-green-500/10 text-green-500" },
+  ARCHIVED: { label: "Archived", color: "bg-zinc-700 text-zinc-400" },
 };
 
 export default function ProjectsPage() {
@@ -51,7 +72,6 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  // fetch projects from API
   const fetchProjects = useCallback(async () => {
     setLoading(true);
     const res = await fetch("/api/projects");
@@ -102,7 +122,7 @@ export default function ProjectsPage() {
               {projects.length} {projects.length === 1 ? "project" : "projects"}
             </p>
           </div>
-          <Button size="lg" onClick={() => setShowCreateDialog(true)} className="bg-stride-blue hover:bg-stride-blue/90">
+          <Button size="lg" onClick={() => setShowCreateDialog(true)} className="bg-stride-blue hover:bg-stride-blue-hover">
             <Plus className="w-5 h-5 mr-2" />
             New Project
           </Button>
@@ -120,7 +140,7 @@ export default function ProjectsPage() {
             <p className="text-zinc-400 mb-8">
               Create your first project to get started with Stride
             </p>
-            <Button size="lg" onClick={() => setShowCreateDialog(true)} className="bg-stride-blue hover:bg-stride-blue/90">
+            <Button size="lg" onClick={() => setShowCreateDialog(true)} className="bg-stride-blue hover:bg-stride-blue-hover">
               <Plus className="w-5 h-5 mr-2" />
               Create Your First Project
             </Button>
@@ -131,6 +151,7 @@ export default function ProjectsPage() {
               <ProjectCard
                 key={project.id}
                 project={project}
+                onUpdate={fetchProjects}
                 onDelete={fetchProjects}
                 onClick={() => router.push(`/projects/${project.id}`)}
               />
@@ -139,7 +160,7 @@ export default function ProjectsPage() {
         )}
       </section>
 
-      {/* create Dialog */}
+      {/* Create Dialog */}
       <CreateProjectDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -152,17 +173,20 @@ export default function ProjectsPage() {
   );
 }
 
-// project card component
+// Project Card Component
 function ProjectCard({
   project,
+  onUpdate,
   onDelete,
   onClick,
 }: {
   project: Project;
+  onUpdate: () => void;
   onDelete: () => void;
   onClick: () => void;
 }) {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleDelete = async () => {
     await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
@@ -173,7 +197,7 @@ function ProjectCard({
     <>
       <div className="relative" onClick={onClick}>
         <Card className="bg-stride-surface border-stride-border hover:border-stride-blue/50 transition-all duration-300 cursor-pointer">
-          {/* dropdown Menu */}
+          {/* Dropdown Menu */}
           <div className="absolute top-4 right-4 z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -189,6 +213,16 @@ function ProjectCard({
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
+                    setShowEditDialog(true);
+                  }}
+                  className="focus:bg-zinc-800"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Project
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowDeleteAlert(true);
                   }}
                   className="text-red-400 focus:text-red-400 focus:bg-zinc-800"
@@ -201,34 +235,60 @@ function ProjectCard({
           </div>
 
           <CardHeader className="space-y-4">
-            {/* icon */}
+            {/* Icon */}
             <div className="w-12 h-12 rounded-lg bg-stride-blue/10 flex items-center justify-center">
               <FolderKanban className="w-6 h-6 text-stride-blue" />
             </div>
 
-            {/* text */}
+            {/* Text */}
             <div className="space-y-2">
-              <CardTitle className="text-xl pr-8">{project.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-xl pr-8">{project.name}</CardTitle>
+              </div>
+              <Badge variant="secondary" className={statusConfig[project.status].color}>
+                {statusConfig[project.status].label}
+              </Badge>
               <CardDescription className="text-zinc-400 leading-relaxed line-clamp-2 min-h-[3rem]">
                 {project.description || "No description"}
               </CardDescription>
             </div>
 
-            {/* footer info */}
-            <div className="flex items-center gap-3 text-sm text-zinc-500 pt-2">
-              <span>
-                {project._count.tasks} {project._count.tasks === 1 ? "task" : "tasks"}
-              </span>
-              <span className="text-zinc-700">•</span>
-              <span className="text-zinc-600">
-                {new Date(project.createdAt).toLocaleDateString()}
-              </span>
+            {/* Footer Info */}
+            <div className="space-y-2 pt-2 border-t border-stride-border">
+              <div className="flex items-center gap-3 text-sm text-zinc-500">
+                <span>
+                  {project._count.tasks} {project._count.tasks === 1 ? "task" : "tasks"}
+                </span>
+                <span className="text-zinc-700">•</span>
+                <span className="text-zinc-600">
+                  {new Date(project.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              {(project.startDate || project.endDate) && (
+                <div className="flex items-center gap-2 text-xs text-zinc-500">
+                  <CalendarIcon className="w-3 h-3" />
+                  {project.startDate && format(new Date(project.startDate), "MMM d")}
+                  {project.startDate && project.endDate && " - "}
+                  {project.endDate && format(new Date(project.endDate), "MMM d, yyyy")}
+                </div>
+              )}
             </div>
           </CardHeader>
         </Card>
       </div>
 
-      {/* delete alert dialog */}
+      {/* Edit Dialog */}
+      <EditProjectDialog
+        project={project}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={() => {
+          setShowEditDialog(false);
+          onUpdate();
+        }}
+      />
+
+      {/* Delete Alert Dialog */}
       <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
         <AlertDialogContent className="bg-stride-surface border-stride-border">
           <AlertDialogHeader>
@@ -256,7 +316,7 @@ function ProjectCard({
   );
 }
 
-// create Project Dialog
+// Create Project Dialog
 function CreateProjectDialog({
   open,
   onOpenChange,
@@ -268,7 +328,12 @@ function CreateProjectDialog({
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<ProjectStatus>("ACTIVE");
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -277,12 +342,23 @@ function CreateProjectDialog({
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, description: description || undefined }),
+      body: JSON.stringify({
+        name,
+        description: description || undefined,
+        status,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+      }),
     });
 
     if (res.ok) {
       setName("");
       setDescription("");
+      setStatus("ACTIVE");
+      setStartDate(new Date());
+      setEndDate(new Date());
+      setShowStartCalendar(false);
+      setShowEndCalendar(false);
       onSuccess();
     }
     setLoading(false);
@@ -290,7 +366,7 @@ function CreateProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-zinc-900 border-zinc-800">
+      <DialogContent className="sm:max-w-[550px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -308,11 +384,12 @@ function CreateProjectDialog({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="My Awesome Project"
-                className="bg-zinc-800 border-zinc-700 focus:ring-stride-blue focus:border-stride-blue"
+                className="bg-zinc-800 border-stride-border focus:ring-stride-blue focus:border-stride-blue"
                 required
                 autoFocus
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="description" className="text-zinc-300">
                 Description
@@ -322,22 +399,335 @@ function CreateProjectDialog({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="What's this project about?"
-                className="bg-zinc-800 border-zinc-700 focus:ring-stride-blue focus:border-stride-blue resize-none"
+                className="bg-zinc-800 border-stride-border focus:ring-stride-blue focus:border-stride-blue resize-none"
                 rows={3}
               />
             </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="status" className="text-zinc-300">
+                Status
+              </Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                <SelectTrigger className="bg-zinc-800 border-stride-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-stride-surface border-stride-border">
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="ARCHIVED">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="text-zinc-300">Project Timeline</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Start Date */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-zinc-400">Start Date</span>
+                    {startDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStartDate(undefined)}
+                        className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowStartCalendar(!showStartCalendar)}
+                    className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                  {showStartCalendar && (
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        setStartDate(date);
+                        setShowStartCalendar(false);
+                      }}
+                      fixedWeeks
+                      className="rounded-lg border border-stride-border bg-zinc-900"
+                    />
+                  )}
+                </div>
+
+                {/* End Date */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-zinc-400">End Date</span>
+                    {endDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEndDate(undefined)}
+                        className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEndCalendar(!showEndCalendar)}
+                    className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                  {showEndCalendar && (
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        setShowEndCalendar(false);
+                      }}
+                      fixedWeeks
+                      className="rounded-lg border border-stride-border bg-zinc-900"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+              className="bg-zinc-800 border-stride-border hover:bg-zinc-700"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="bg-stride-blue hover:bg-stride-blue/90">
+            <Button type="submit" disabled={loading} className="bg-stride-blue hover:bg-stride-blue-hover">
               {loading ? "Creating..." : "Create Project"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Project Dialog
+function EditProjectDialog({
+  project,
+  open,
+  onOpenChange,
+  onSuccess,
+}: {
+  project: Project;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}) {
+  const [name, setName] = useState(project.name);
+  const [description, setDescription] = useState(project.description || "");
+  const [status, setStatus] = useState<ProjectStatus>(project.status);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    project.startDate ? new Date(project.startDate) : new Date()
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    project.endDate ? new Date(project.endDate) : new Date()
+  );
+  const [loading, setLoading] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+
+  useEffect(() => {
+    setName(project.name);
+    setDescription(project.description || "");
+    setStatus(project.status);
+    setStartDate(project.startDate ? new Date(project.startDate) : new Date());
+    setEndDate(project.endDate ? new Date(project.endDate) : new Date());
+    setShowStartCalendar(false);
+    setShowEndCalendar(false);
+  }, [project]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const res = await fetch(`/api/projects/${project.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        description: description || undefined,
+        status,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+      }),
+    });
+
+    if (res.ok) {
+      onSuccess();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[550px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Project</DialogTitle>
+          <DialogDescription className="text-zinc-400">
+            Update project details and timeline.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name" className="text-zinc-300">
+                Project Name
+              </Label>
+              <Input
+                id="edit-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="bg-zinc-800 border-stride-border focus:ring-stride-blue focus:border-stride-blue"
+                required
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description" className="text-zinc-300">
+                Description
+              </Label>
+              <Textarea
+                id="edit-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="bg-zinc-800 border-stride-border focus:ring-stride-blue focus:border-stride-blue resize-none"
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status" className="text-zinc-300">
+                Status
+              </Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as ProjectStatus)}>
+                <SelectTrigger className="bg-zinc-800 border-stride-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-stride-surface border-stride-border">
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="ARCHIVED">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="text-zinc-300">Project Timeline</Label>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Start Date */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-zinc-400">Start Date</span>
+                    {startDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setStartDate(undefined)}
+                        className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowStartCalendar(!showStartCalendar)}
+                    className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                  {showStartCalendar && (
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        setStartDate(date);
+                        setShowStartCalendar(false);
+                      }}
+                      fixedWeeks
+                      className="rounded-lg border border-stride-border bg-zinc-900"
+                    />
+                  )}
+                </div>
+
+                {/* End Date */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-zinc-400">End Date</span>
+                    {endDate && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEndDate(undefined)}
+                        className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEndCalendar(!showEndCalendar)}
+                    className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                  {showEndCalendar && (
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        setShowEndCalendar(false);
+                      }}
+                      fixedWeeks
+                      className="rounded-lg border border-stride-border bg-zinc-900"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="bg-zinc-800 border-stride-border hover:bg-zinc-700"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading} className="bg-stride-blue hover:bg-stride-blue-hover">
+              {loading ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
