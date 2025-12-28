@@ -20,6 +20,9 @@ export async function GET(_req: Request, { params }: Params) {
             id: true,
             name: true,
             description: true,
+            status: true,
+            startDate: true,
+            endDate: true,
             createdAt: true,
             updatedAt: true,
             tasks: {
@@ -29,6 +32,8 @@ export async function GET(_req: Request, { params }: Params) {
                     title: true,
                     description: true,
                     status: true,
+                    priority: true,
+                    dueDate: true,
                     createdAt: true,
                     updatedAt: true,
                 },
@@ -68,9 +73,16 @@ export async function PUT(req: Request, { params }: Params) {
         where: { id, userId },
         data: {
             name: parsed.data.name,
+            status: parsed.data.status,
+            startDate: parsed.data.startDate !== undefined 
+                ? (parsed.data.startDate ? new Date(parsed.data.startDate) : null)
+                : undefined,
+            endDate: parsed.data.endDate !== undefined 
+                ? (parsed.data.endDate ? new Date(parsed.data.endDate) : null)
+                : undefined,
             ...(Object.prototype.hasOwnProperty.call(parsed.data, "description")
-            ? { description : parsed.data.description }
-            : {}
+                ? { description : parsed.data.description }
+                : {}
             ),
         },
     });
@@ -84,8 +96,12 @@ export async function PUT(req: Request, { params }: Params) {
         select: { id: true, 
             name: true, 
             description: true, 
+            status: true,
+            startDate: true,
+            endDate: true,
             createdAt: true, 
-            updatedAt: true},
+            updatedAt: true
+        },
     });
 
     return NextResponse.json({ data: updated }, { status: 200 });
