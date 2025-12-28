@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { describe } from "zod/v4/core";
 
 export const createProjectSchema = z.object({
     name: z.string().min(1).max(120),
@@ -12,6 +11,13 @@ export const createTaskSchema = z.object({
     title: z.string().min(1).max(200),
     description: z.string().max(5000).optional(),
     status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+    projectId: z.string().min(1),
 });
 
-export const updateTaskSchema = createTaskSchema.partial();
+export const updateTaskSchema = z.object({
+    title: z.string().min(1).max(200),
+    description: z.string().max(5000).optional(),
+    status: z.enum(["TODO", "IN_PROGRESS", "DONE"]).optional(),
+    projectId: z.string().min(1).optional(),
+})
+
