@@ -37,7 +37,7 @@ export default function Home() {
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button size="lg" asChild>
-              <Link href="/signup">Get Started Free</Link>
+              <Link href="/projects">Get Started Free</Link>
             </Button>
              <Button size="lg" variant="outline" asChild>
               <Link href="/demo">Watch Demo</Link>
