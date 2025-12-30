@@ -31,7 +31,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "19.2.3",
     "recharts": "^3.6.0",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.18",
