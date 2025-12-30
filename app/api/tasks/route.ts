@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { createTaskSchema } from "@/lib/validators"
 
 // GET
+// GET
 export async function GET(req: Request) {
     const { userId } = await auth();
     if (!userId) {
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
         select: { id: true }
     });
     
-    const userProjectIds = userProjects.map(p => p.id);
+    const userProjectIds = userProjects.map((p: { id: string }) => p.id);
 
     const tasks = await prisma.task.findMany({
         where: {
