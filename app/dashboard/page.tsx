@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { Navbar } from "@/components/navbar";
+import { LoadingSpinner } from "@/components/loading-spinner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,10 @@ import {
   Circle, 
   Clock, 
   TrendingUp,
-  Calendar,
   AlertCircle,
   ArrowRight
 } from "lucide-react";
-import { format, subDays, isAfter, isBefore, startOfDay, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
+import { format, subDays, isAfter, isBefore, startOfDay, eachDayOfInterval } from "date-fns";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
@@ -99,7 +99,11 @@ export default function DashboardPage() {
   }, [isSignedIn, fetchData]);
 
   if (!isLoaded || !isSignedIn) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (loading) {
@@ -107,7 +111,7 @@ export default function DashboardPage() {
       <div className="min-h-screen">
         <Navbar />
         <div className="flex items-center justify-center h-[80vh]">
-          <div className="text-zinc-400">Loading dashboard...</div>
+          <LoadingSpinner text="Loading dashboard..." />
         </div>
       </div>
     );
@@ -367,9 +371,7 @@ export default function DashboardPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                     label={({ name, percent }: { name: string; percent?: number }) => 
-                        `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
+                      label={(entry: any) => `${entry.name}: ${((entry.percent || 0) * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
