@@ -37,19 +37,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ArrowLeft, MoreVertical, Trash2, CheckCircle2, Circle, Clock } from "lucide-react";
+import { Plus, ArrowLeft, MoreVertical, Trash2, CheckCircle2, Circle, Clock, Calendar as CalendarIcon, X, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE";
+type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
 
 type Task = {
   id: string;
   title: string;
   description: string | null;
   status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string | null;
   projectId: string;
   createdAt: string;
   updatedAt: string;
@@ -69,6 +74,12 @@ const statusConfig = {
   TODO: { label: "To Do", icon: Circle, color: "text-zinc-400", badge: "bg-zinc-800 text-zinc-300" },
   IN_PROGRESS: { label: "In Progress", icon: Clock, color: "text-stride-blue", badge: "bg-stride-blue/10 text-stride-blue" },
   DONE: { label: "Done", icon: CheckCircle2, color: "text-green-500", badge: "bg-green-500/10 text-green-500" },
+};
+
+const priorityConfig = {
+  LOW: { label: "Low", color: "bg-zinc-700 text-zinc-300", icon: "○" },
+  MEDIUM: { label: "Medium", color: "bg-yellow-500/10 text-yellow-500", icon: "◐" },
+  HIGH: { label: "High", color: "bg-red-500/10 text-red-500", icon: "●" },
 };
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -239,6 +250,9 @@ function TaskCard({
     onUpdate();
   };
 
+  // Check if task is overdue
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "DONE";
+
   return (
     <>
       <Card className="bg-stride-surface border-stride-border hover:border-stride-blue/30 transition-all cursor-pointer group">
@@ -275,7 +289,25 @@ function TaskCard({
 
           {/* Content */}
           <div className="space-y-3 pr-8">
-            <h3 className="font-medium leading-tight">{task.title}</h3>
+            <div className="space-y-2">
+              <h3 className="font-medium leading-tight">{task.title}</h3>
+              
+              {/* Priority and Due Date */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="secondary" className={`${priorityConfig[task.priority].color} text-xs`}>
+                  {priorityConfig[task.priority].icon} {priorityConfig[task.priority].label}
+                </Badge>
+                
+                {task.dueDate && (
+                  <div className={`flex items-center gap-1 text-xs ${isOverdue ? 'text-red-400' : 'text-zinc-500'}`}>
+                    {isOverdue && <AlertCircle className="w-3 h-3" />}
+                    <CalendarIcon className="w-3 h-3" />
+                    <span>{format(new Date(task.dueDate), "MMM d, yyyy")}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {task.description && (
               <p className="text-sm text-zinc-400 line-clamp-2">{task.description}</p>
             )}
@@ -346,6 +378,9 @@ function CreateTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("TODO");
+  const [priority, setPriority] = useState<TaskPriority>("MEDIUM");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [showCalendar, setShowCalendar] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -359,6 +394,8 @@ function CreateTaskDialog({
         title,
         description: description || undefined,
         status,
+        priority,
+        dueDate: dueDate?.toISOString(),
         projectId,
       }),
     });
@@ -367,6 +404,9 @@ function CreateTaskDialog({
       setTitle("");
       setDescription("");
       setStatus("TODO");
+      setPriority("MEDIUM");
+      setDueDate(undefined);
+      setShowCalendar(false);
       onSuccess();
     }
     setLoading(false);
@@ -374,7 +414,7 @@ function CreateTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-stride-surface border-stride-border">
+      <DialogContent className="sm:max-w-[500px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -397,6 +437,7 @@ function CreateTaskDialog({
                 autoFocus
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="description" className="text-zinc-300">
                 Description
@@ -410,24 +451,84 @@ function CreateTaskDialog({
                 rows={3}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="status" className="text-zinc-300">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger className="bg-zinc-800 border-stride-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-stride-surface border-stride-border">
+                    {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusConfig[s].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="priority" className="text-zinc-300">
+                  Priority
+                </Label>
+                <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+                  <SelectTrigger className="bg-zinc-800 border-stride-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-stride-surface border-stride-border">
+                    {(["LOW", "MEDIUM", "HIGH"] as TaskPriority[]).map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {priorityConfig[p].icon} {priorityConfig[p].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="status" className="text-zinc-300">
-                Status
-              </Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger className="bg-zinc-800 border-stride-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-stride-surface border-stride-border">
-                  {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {statusConfig[s].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-300">Due Date (Optional)</Label>
+                {dueDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDueDate(undefined)}
+                    className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showCalendar && (
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={(date) => {
+                    setDueDate(date);
+                    setShowCalendar(false);
+                  }}
+                  fixedWeeks
+                  className="rounded-lg border border-stride-border bg-zinc-900"
+                />
+              )}
             </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -462,12 +563,20 @@ function EditTaskDialog({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [status, setStatus] = useState<TaskStatus>(task.status);
+  const [priority, setPriority] = useState<TaskPriority>(task.priority);
+  const [dueDate, setDueDate] = useState<Date | undefined>(
+    task.dueDate ? new Date(task.dueDate) : undefined
+  );
+  const [showCalendar, setShowCalendar] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setTitle(task.title);
     setDescription(task.description || "");
     setStatus(task.status);
+    setPriority(task.priority);
+    setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
+    setShowCalendar(false);
   }, [task]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -481,6 +590,8 @@ function EditTaskDialog({
         title,
         description: description || undefined,
         status,
+        priority,
+        dueDate: dueDate ? dueDate.toISOString() : null,
       }),
     });
 
@@ -492,7 +603,7 @@ function EditTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-stride-surface border-stride-border">
+      <DialogContent className="sm:max-w-[500px] bg-stride-surface border-stride-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription className="text-zinc-400">
@@ -513,6 +624,7 @@ function EditTaskDialog({
                 required
               />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="edit-description" className="text-zinc-300">
                 Description
@@ -525,24 +637,84 @@ function EditTaskDialog({
                 rows={3}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-status" className="text-zinc-300">
+                  Status
+                </Label>
+                <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
+                  <SelectTrigger className="bg-zinc-800 border-stride-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-stride-surface border-stride-border">
+                    {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {statusConfig[s].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-priority" className="text-zinc-300">
+                  Priority
+                </Label>
+                <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
+                  <SelectTrigger className="bg-zinc-800 border-stride-border">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-stride-surface border-stride-border">
+                    {(["LOW", "MEDIUM", "HIGH"] as TaskPriority[]).map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {priorityConfig[p].icon} {priorityConfig[p].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid gap-2">
-              <Label htmlFor="edit-status" className="text-zinc-300">
-                Status
-              </Label>
-              <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
-                <SelectTrigger className="bg-zinc-800 border-stride-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-stride-surface border-stride-border">
-                  {(["TODO", "IN_PROGRESS", "DONE"] as TaskStatus[]).map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {statusConfig[s].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-300">Due Date (Optional)</Label>
+                {dueDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDueDate(undefined)}
+                    className="h-6 px-2 text-zinc-500 hover:text-zinc-300"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className="w-full bg-zinc-800 border-stride-border justify-start text-left font-normal"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
+              </Button>
+              {showCalendar && (
+                <Calendar
+                  mode="single"
+                  selected={dueDate}
+                  onSelect={(date) => {
+                    setDueDate(date);
+                    setShowCalendar(false);
+                  }}
+                  fixedWeeks
+                  className="rounded-lg border border-stride-border bg-zinc-900"
+                />
+              )}
             </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"

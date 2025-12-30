@@ -1,11 +1,14 @@
 import { Navbar } from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { FeatureCard } from "@/components/feature-card";
+import { auth } from "@clerk/nextjs/server";
 
 import Link from "next/link";
 import { Brain, BarChart3, Zap } from "lucide-react";
 
-export default function Home() {
+export default async function Home() {
+  const { userId } = await auth();
+
   return (
   <div className="min-h-screen">
     <Navbar />
@@ -37,7 +40,9 @@ export default function Home() {
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button size="lg" asChild>
-              <Link href="/projects">Get Started Free</Link>
+              <Link href={userId ? "/projects" : "/sign-up"}>
+                {userId ? "My Projects" : "Get Started Free"}
+              </Link>
             </Button>
              <Button size="lg" variant="outline" asChild>
               <Link href="/demo">Watch Demo</Link>

@@ -7,11 +7,11 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
-import { User } from "lucide-react";
+import { LayoutDashboard, FolderKanban } from "lucide-react";
 
 export function Navbar() {
     return (
-        <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-stride-g/95 backdrop-blur supports-[backdrop-filter]:bg-stride-bg/60">
+        <nav className="sticky top-0 z-50 border-b border-zinc-800 bg-stride-bg/95 backdrop-blur supports-[backdrop-filter]:bg-stride-bg/60">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* logo */}
@@ -21,40 +21,40 @@ export function Navbar() {
                         </span>
                     </Link>
 
-                    {/* navigation */}
-                    {/* <div className="flex items-center gap-4">
-                        <Button variant="ghost" asChild>
-                            <Link href="/signin">Sign In</Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href="/signup">Sign Up</Link>
-                        </Button>
-                        
-                    </div> */}
-
-                    {/* with clerk auth */}
+                    {/* navigation - signed in */}
                     <div className="flex items-center gap-4">
+                        <SignedIn>
+                            <Button variant="ghost" asChild className="text-zinc-400 hover:text-zinc-100">
+                                <Link href="/projects" className="flex items-center gap-2">
+                                    <FolderKanban className="w-4 h-4" />
+                                    Projects
+                                </Link>
+                            </Button>
+                            <Button variant="ghost" asChild className="text-zinc-400 hover:text-zinc-100">
+                                <Link href="/dashboard" className="flex items-center gap-2">
+                                    <LayoutDashboard className="w-4 h-4" />
+                                    Dashboard
+                                </Link>
+                            </Button>
+                            <UserButton />
+                        </SignedIn>
+
                         <SignedOut>
                             <SignInButton>
-                                <Button variant="ghost" asChild>
-                                    <Link href="/sign-in">Sign In</Link>
+                                <Button variant="ghost">
+                                    Sign In
                                 </Button>
                             </SignInButton>
 
                             <SignUpButton>
-                                <Button asChild>
-                                    <Link href="/sign-up">Sign Up</Link>
+                                <Button>
+                                    Sign Up
                                 </Button>
                             </SignUpButton>
                         </SignedOut>
-                       <SignedIn>
-                            <span className="text-sm text-zinc-400">Signed in</span>
-                            <UserButton />
-                       </SignedIn>
                     </div>
                 </div>
             </div>
-
         </nav>
     )
 }
